@@ -30,6 +30,8 @@ class GameController {
 
   bool aiModeEnabled = false;
 
+  String selectedRobot = 'A';
+
   List<Position> currentAiPath = [];
   List<Position> currentAiPathB = [];
   Map<Position, int> visitCount = {};
@@ -98,6 +100,11 @@ class GameController {
     message = aiModeEnabled
         ? 'AI režim zapnutý. Robot A aj Robot B si rozdeľujú balíky.'
         : 'AI režim vypnutý.';
+  }
+
+  void selectRobot(String robotName) {
+    selectedRobot = robotName;
+    message = 'Ručne ovládaš Robot $robotName.';
   }
 
   void runAiStep() {
@@ -309,8 +316,13 @@ class GameController {
   }
 
   void moveRobot(int dRow, int dCol) {
-    final nextPosition = robot.position.move(dRow, dCol);
-    moveRobotTo(nextPosition);
+    if (selectedRobot == 'A') {
+      final nextPosition = robot.position.move(dRow, dCol);
+      moveRobotTo(nextPosition);
+    } else {
+      final nextPosition = robotB.position.move(dRow, dCol);
+      moveRobotBTo(nextPosition);
+    }
   }
 
   void moveRobotTo(Position nextPosition) {
@@ -348,6 +360,38 @@ class GameController {
     _checkRobotAPosition();
   }
 
+
+  void moveRobotBTo(Position nextPosition) {
+    if (robotB.isBatteryEmpty) {
+      message = 'Robot B je vybitý. Musí sa dobiť.';
+      return;
+    }
+
+    if (!nextPosition.isInsideWarehouse) {
+      message = 'Pozor, koniec haly!';
+      return;
+    }
+
+    if (map.isObstacle(nextPosition)) {
+      obstacleHits++;
+      message = 'Pred Robotom B je prekážka.';
+      return;
+    }
+
+    if (nextPosition == robot.position && nextPosition != dockB) {
+      message = 'Na tomto políčku je Robot A.';
+      return;
+    }
+
+    robotB.moveTo(nextPosition);
+
+    visitCount[nextPosition] = (visitCount[nextPosition] ?? 0) + 1;
+    manualMoves++;
+
+    _checkRobotBPosition();
+  }
+
+
   void _checkRobotAPosition() {
     if (robot.position == dockA) {
       robot.charge();
@@ -363,13 +407,21 @@ class GameController {
       return;
     }
 
-    if (!robot.carryingPackage &&
-        robotAPackage != null &&
-        robot.position == robotAPackage!.position) {
-      robot.carryingPackage = true;
-      robotAPackage!.pickedUp = true;
-      message = 'Robot A vyzdvihol ${robotAPackage!.id}.';
-      return;
+    if (!robot.carryingPackage) {
+      final package = packages.where(
+            (p) =>
+        !p.pickedUp &&
+            !p.delivered &&
+            p.position == robot.position,
+      );
+
+      if (package.isNotEmpty) {
+        robotAPackage = package.first;
+        robot.carryingPackage = true;
+        robotAPackage!.pickedUp = true;
+        message = 'Robot A vyzdvihol ${robotAPackage!.id}.';
+        return;
+      }
     }
 
     if (robot.carryingPackage && robot.position == map.counter) {
@@ -419,12 +471,21 @@ class GameController {
       return;
     }
 
-    if (!robotB.carryingPackage &&
-        robotBPackage != null &&
-        robotB.position == robotBPackage!.position) {
-      robotB.carryingPackage = true;
-      robotBPackage!.pickedUp = true;
-      return;
+    if (!robotB.carryingPackage) {
+      final package = packages.where(
+            (p) =>
+        !p.pickedUp &&
+            !p.delivered &&
+            p.position == robotB.position,
+      );
+
+      if (package.isNotEmpty) {
+        robotBPackage = package.first;
+        robotB.carryingPackage = true;
+        robotBPackage!.pickedUp = true;
+        message = 'Robot B vyzdvihol ${robotBPackage!.id}.';
+        return;
+      }
     }
 
     if (robotB.carryingPackage && robotB.position == map.counter) {
@@ -440,6 +501,8 @@ class GameController {
       robotBPackage = null;
 
       _generateMissingPackage();
+
+      message = 'Robot B doručil zásielku.';
 
       return;
     }

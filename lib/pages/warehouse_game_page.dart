@@ -6,7 +6,6 @@ import '../widgets/brightpick_app_bar.dart';
 import '../widgets/game_info_panel.dart';
 import '../widgets/warehouse_grid.dart';
 import '../widgets/robot_controls.dart';
-import '../widgets/ai_insight_panel.dart';
 import '../widgets/performance_panel.dart';
 
 class WarehouseGamePage extends StatefulWidget {
@@ -68,7 +67,7 @@ class _WarehouseGamePageState extends State<WarehouseGamePage> {
                 width: 280,
                 child: Column(
                   children: [
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 10),
                     RobotControls(
                       aiEnabled: game.aiModeEnabled,
                       onToggleAi: () {
@@ -99,6 +98,16 @@ class _WarehouseGamePageState extends State<WarehouseGamePage> {
                       onReset: () {
                         setState(() {
                           game.reset();
+                        });
+                      },
+                      onSelectRobotA: () {
+                        setState(() {
+                          game.selectRobot('A');
+                        });
+                      },
+                      onSelectRobotB: () {
+                        setState(() {
+                          game.selectRobot('B');
                         });
                       },
                     ),
